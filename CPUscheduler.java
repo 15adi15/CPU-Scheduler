@@ -1,6 +1,9 @@
+import java.util.LinkedList;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class CPUscheduler {
 
@@ -53,6 +56,40 @@ public class CPUscheduler {
             increment.setDaemon(true);
             increment.start();
         }
+
+    }
+
+    static class JobQueue {
+        LinkedList<PCB> jobqueue = new LinkedList<>();// a non thread safe data structure
+        final Lock queuelock = new ReentrantLock();// declared a lock
+
+        // for producer(new process)
+        public void addJob(PCB p) {
+            queuelock.lock();
+            try {
+                jobqueue.add(p);
+            } finally {
+                queuelock.unlock();
+            }
+        }
+
+        // for consumer(memory manager)
+        public PCB getJob() {
+            queuelock.lock();
+            try {
+                if (!jobqueue.isEmpty()) {
+                    return jobqueue.poll();
+                } else {
+                    return null;
+                }
+            } finally {
+                queuelock.unlock();
+            }
+        }
+
+    }
+
+    static class MemoryManager implements Runnable {
 
     }
 
