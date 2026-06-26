@@ -100,9 +100,11 @@ public class CPUscheduler {
 
     static class MemoryManager implements Runnable {
 
-        int availablememory = 256;
+        static int availablememory = 256;
         // we will create an list that will store the process
-        List<PCB> loadedprocess = new ArrayList<>();
+        static List<PCB> loadedprocess = new ArrayList<>();
+
+        static Lock memorylock = new ReentrantLock();
 
         @Override
         public void run() {
@@ -143,6 +145,18 @@ public class CPUscheduler {
                 } catch (InterruptedException e) {
                     // TODO: handle exception
                 }
+            }
+        }
+
+        // a special method that will only be accessed by the cpu to clear of memroy of
+        // a process once it is successfully terminated
+        public static void freememory(PCB p) {
+            memorylock.lock();
+            try {
+                MemoryManager.availablememory += p.memoryRequired;
+                MemoryManager.loadedprocess.remove(p);
+            } finally {
+                memorylock.unlock();
             }
         }
     }
@@ -240,6 +254,7 @@ public class CPUscheduler {
                 accessLock.unlock();
             }
         }
+
     }
 
     static class bgAntiStarvation implements Runnable {
@@ -258,6 +273,63 @@ public class CPUscheduler {
             });
             antistarvationthread.setDaemon(true);
             antistarvationthread.start();
+        }
+    }
+
+    static class CPUcore implements Runnable {
+        int coreId;
+
+        // a constructor for cpu core's
+        public CPUcore(int coreId) {
+            this.coreId = coreId;
+        }
+
+        public void run() {
+            while (true) {
+                try {
+                    // step one --> get a process from MLFQ
+                    PCB process = MLFQ.getHighPriorityProcess();
+                    if (process != null) {
+                        process.lastUsedTime = GlobalClock.systemTime.get();
+                        if (process.prioritynumber == 0) {
+                            if (process.Timeremaining <= 10) {
+                                Thread.sleep(process.Timeremaining);
+                                // terminate the process successfully and free up its memory
+                                MemoryManager.freememory(process);
+                                process.completionTime = GlobalClock.systemTime.get();
+
+                                System.out.println("Process" + process.Pid + " Completed successfully!");
+                            } else {
+                                Thread.sleep(10);
+                                process.Timeremaining -= 10;
+                                MLFQ.demoteprocess(1, process);
+                            }
+                        } else if (process.prioritynumber == 1) {
+                            if (process.Timeremaining <= 20) {
+                                Thread.sleep(process.Timeremaining);
+                                MemoryManager.freememory(process);
+                                process.completionTime = GlobalClock.systemTime.get();
+
+                                System.out.println("Process" + process.Pid + " Completed successfully!");
+                            } else {
+                                Thread.sleep(20);
+                                process.Timeremaining -= 20;
+                                MLFQ.demoteprocess(2, process);
+                            }
+                        } else if (process.prioritynumber == 2) {
+                            Thread.sleep(process.Timeremaining);
+                            MemoryManager.freememory(process);
+                            process.completionTime = GlobalClock.systemTime.get();
+
+                            System.out.println("Process" + process.Pid + " Completed successfully!");
+                        }
+                    } else {
+                        Thread.sleep(2);
+                    }
+                } catch (Exception e) {
+                    // TODO: handle exception
+                }
+            }
         }
     }
 
