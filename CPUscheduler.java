@@ -122,7 +122,11 @@ public class CPUscheduler {
                         // we will check the required memory
                         int reqmemo = processtoAllocate.getMemoryRequired();
                         while (reqmemo > availablememory) {// we shall remove the oldestprocess(smallest lut)
+
                             PCB oldestprocess = loadedprocess.get(0);
+                            System.out.printf("%s [MemManager] RAM Full! Swapping out PID-%d (LRU) to load PID-%d.\n",
+                                    String.format("[Time: %04dms]", GlobalClock.systemTime.get()), oldestprocess.Pid,
+                                    processtoAllocate.Pid);
                             for (int i = 1; i < loadedprocess.size(); i++) {
                                 if (oldestprocess.lastUsedTime > loadedprocess.get(i).lastUsedTime) {
                                     oldestprocess = loadedprocess.get(i);
@@ -137,7 +141,8 @@ public class CPUscheduler {
                         // now we have enough memory
                         loadedprocess.add(processtoAllocate);
                         availablememory -= processtoAllocate.getMemoryRequired();
-                        System.out.println("--------Successfully allocated memory in RAM--------");
+                        System.out.printf("%s [MemManager] Allocated memory for PID-%d.\n",
+                                String.format("[Time: %04dms]", GlobalClock.systemTime.get()), processtoAllocate.Pid);
                         MLFQ.addprocess(processtoAllocate);
                     } else {
                         Thread.sleep(2);
@@ -174,6 +179,8 @@ public class CPUscheduler {
         public static void addprocess(PCB p) {
             accessLock.lock();
             try {
+                System.out.printf("%s [MLFQ] PID-%d added to Queue 0.\n",
+                        String.format("[Time: %04dms]", GlobalClock.systemTime.get()), p.Pid);
                 p.prioritynumber = 0;
                 queue0.add(p);
             } finally {
@@ -290,6 +297,9 @@ public class CPUscheduler {
                     // step one --> get a process from MLFQ
                     PCB process = MLFQ.getHighPriorityProcess();
                     if (process != null) {
+                        System.out.printf("%s [Core-%d] Fetched PID-%d. Executing...\n",
+                                String.format("[Time: %04dms]", GlobalClock.systemTime.get()), this.coreId,
+                                process.Pid);
                         process.lastUsedTime = GlobalClock.systemTime.get();
                         if (process.prioritynumber == 0) {
                             if (process.Timeremaining <= 10) {
@@ -297,11 +307,16 @@ public class CPUscheduler {
                                 // terminate the process successfully and free up its memory
                                 MemoryManager.freememory(process);
                                 process.completionTime = GlobalClock.systemTime.get();
+                                System.out.printf("%s [Core-%d] PID-%d Completed successfully!\n",
+                                        String.format("[Time: %04dms]", GlobalClock.systemTime.get()), this.coreId,
+                                        process.Pid);
 
-                                System.out.println("Process" + process.Pid + " Completed successfully!");
                             } else {
                                 Thread.sleep(10);
                                 process.Timeremaining -= 10;
+                                System.out.printf("%s [Core-%d] Quantum expired for PID-%d. Demoting to Queue 1.\n",
+                                        String.format("[Time: %04dms]", GlobalClock.systemTime.get()), this.coreId,
+                                        process.Pid);
                                 MLFQ.demoteprocess(1, process);
                             }
                         } else if (process.prioritynumber == 1) {
@@ -310,10 +325,16 @@ public class CPUscheduler {
                                 MemoryManager.freememory(process);
                                 process.completionTime = GlobalClock.systemTime.get();
 
-                                System.out.println("Process" + process.Pid + " Completed successfully!");
+                                System.out.printf("%s [Core-%d] PID-%d Completed successfully!\n",
+                                        String.format("[Time: %04dms]", GlobalClock.systemTime.get()), this.coreId,
+                                        process.Pid);
+
                             } else {
                                 Thread.sleep(20);
                                 process.Timeremaining -= 20;
+                                System.out.printf("%s [Core-%d] Quantum expired for PID-%d. Demoting to Queue 1.\n",
+                                        String.format("[Time: %04dms]", GlobalClock.systemTime.get()), this.coreId,
+                                        process.Pid);
                                 MLFQ.demoteprocess(2, process);
                             }
                         } else if (process.prioritynumber == 2) {
@@ -321,7 +342,10 @@ public class CPUscheduler {
                             MemoryManager.freememory(process);
                             process.completionTime = GlobalClock.systemTime.get();
 
-                            System.out.println("Process" + process.Pid + " Completed successfully!");
+                            System.out.printf("%s [Core-%d] PID-%d Completed successfully!\n",
+                                    String.format("[Time: %04dms]", GlobalClock.systemTime.get()), this.coreId,
+                                    process.Pid);
+
                         }
                     } else {
                         Thread.sleep(2);
