@@ -33,6 +33,21 @@ public class CPUscheduler {
             this.lastUsedTime = arrivalTime;
         }
 
+        public static void spawnprocess(int limit) {
+            Thread spwanprocess = new Thread(() -> {
+                for (int i = 0; i <= limit; i++) {
+                    PCB p = new PCB();
+                    JobQueue.addJob(p);
+                    try {
+                        Thread.sleep(ThreadLocalRandom.current().nextInt(5, 30));
+                    } catch (Exception e) {
+                        // TODO: handle exception
+                    }
+                }
+            });
+            spwanprocess.start();
+        }
+
         // Getters for process id and process state and memory required
         public int getPid() {
             return Pid;
@@ -359,6 +374,33 @@ public class CPUscheduler {
 
     public static void main(String arg[]) {
 
+        System.out.println("Starting OS Boot Sequence...");
+
+        // 1. Start the Memory Manager
+        Thread memoryManager = new Thread(new MemoryManager());
+        memoryManager.setDaemon(true);
+        memoryManager.start();
+
+        // 2. Start the Anti-Starvation Daemon
+        new bgAntiStarvation().run();
+
+        // 3. Start 4 CPU Cores
+        for (int i = 1; i <= 4; i++) {
+            Thread core = new Thread(new CPUcore(i));
+            core.setDaemon(true);
+            core.start();
+        }
+
+        // 4. Telling the PCB class to spawn 30 random processes in the background
+        System.out.println("OS Boot Complete. Spawning processes...\n");
+        PCB.spawnprocess(30);
+
+        // 5. Keeping the main thread alive to watch the simulation
+        try {
+            Thread.sleep(5000);
+            System.out.println("\n--- SIMULATION FINISHED ---");
+        } catch (InterruptedException e) {
+        }
     }
 
 }
