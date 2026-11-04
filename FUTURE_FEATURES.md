@@ -1,4 +1,21 @@
-# CPU Scheduler Simulation: Future Hardcore Features Roadmap
+# CPU Scheduler Simulation: Future Features Roadmap
+
+## Implemented foundation (2026 refresh)
+
+The original single-file, polling simulation has been replaced by a modular
+engine with explicit process lifecycle transitions, blocking MLFQ dispatch,
+graceful shutdown, asynchronous disk/network I/O, demand paging with LRU frame
+replacement, events, and metrics. See `README.md` for the current architecture
+and how to run the integration check.
+
+## Next: cache hierarchy and multicore locality
+
+Cache simulation should be introduced before page-file serialization because it
+directly validates CPU affinity and work-stealing policies. Model private L1,
+private/cluster L2, and shared L3 cache *metadata* (tags, state, replacement),
+not raw host memory. Start with read-only LRU/Clock behavior and hit latency;
+then add MSI/MESI invalidation and write-back behavior. Cache outcomes should
+feed metrics and optional affinity scoring, never silently change correctness.
 
 This document outlines the roadmap for taking this CPU scheduler simulation from a high-level logical model to a low-level, hyper-realistic Operating System kernel simulation. 
 
