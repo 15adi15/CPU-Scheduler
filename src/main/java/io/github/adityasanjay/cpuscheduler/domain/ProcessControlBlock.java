@@ -101,9 +101,7 @@ public final class ProcessControlBlock {
     public synchronized int blockForPageFault() {
         requireState(ProcessState.RUNNING);
         state = ProcessState.BLOCKED_PAGE_FAULT;
-        int page = nextMemoryPage;
-        nextMemoryPage = (nextMemoryPage + 1) % spec.memoryPages();
-        return page;
+        return nextMemoryPage;
     }
 
     public synchronized void completePageFault(int readyQueueLevel, long now) {
@@ -115,6 +113,11 @@ public final class ProcessControlBlock {
     /** Generates a deterministic working-set trace until richer traces are added. */
     public synchronized int nextMemoryPage() {
         return nextMemoryPage;
+    }
+
+    /** Advance only after the current logical page has actually been accessed. */
+    public synchronized void completeMemoryAccess() {
+        nextMemoryPage = (nextMemoryPage + 1) % spec.memoryPages();
     }
 
     public synchronized boolean promoteIfReady(int targetQueueLevel) {

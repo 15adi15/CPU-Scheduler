@@ -17,6 +17,8 @@ its snapshots, events, and metrics without becoming part of scheduling logic.
 - Demand-paged memory manager with a synchronized frame table, deterministic
   process working-set references, LRU replacement, asynchronous page-in, and
   `BLOCKED_PAGE_FAULT` lifecycle handling.
+- Private per-core L1 caches with configurable metadata-line capacity, LRU
+  replacement, access latency, events, and cache hit/miss metrics.
 - Graceful engine lifecycle, event stream, process snapshots, and scheduler metrics.
 - Dependency-free integration verification runnable with the JDK.
 
@@ -54,10 +56,10 @@ java -cp out io.github.adityasanjay.cpuscheduler.Demo
 Cache simulation will model latency and coherence consequences, rather than
 attempting to emulate hardware bytes or machine instructions.
 
-1. **Locality model:** give each CPU burst a deterministic memory-access trace
-   (page/address tokens plus reads or writes). Add a private L1 cache per core,
-   configurable capacity, line size, associativity, hit latency, and LRU/Clock
-   replacement. A context switch or migration then has observable locality cost.
+1. **Locality model:** implemented as a private L1 cache per core with
+   configurable metadata-line capacity, LRU replacement, and hit/miss latency.
+   It uses deterministic page references; a context switch or migration can
+   therefore produce a miss on the new core.
 2. **Cache hierarchy:** add private or cluster-local L2 caches and a shared L3.
    Every simulated access walks `L1 → L2 → L3 → RAM`; metrics record hits,
    misses, eviction count, and accumulated memory-stall time.

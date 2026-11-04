@@ -1,5 +1,6 @@
 package io.github.adityasanjay.cpuscheduler.runtime;
 
+import io.github.adityasanjay.cpuscheduler.cache.CacheConfig;
 import io.github.adityasanjay.cpuscheduler.memory.MemoryConfig;
 
 import java.util.List;
@@ -13,12 +14,13 @@ public record SimulationConfig(
         int diskDeviceCount,
         int networkDeviceCount,
         boolean ioPriorityBoost,
-        MemoryConfig memory) {
+        MemoryConfig memory,
+        CacheConfig cache) {
 
     public SimulationConfig {
         if (coreCount < 1 || quantumsMillis == null || quantumsMillis.isEmpty()
                 || agingThresholdMillis < 1 || agingScanPeriodMillis < 1
-                || diskDeviceCount < 1 || networkDeviceCount < 1 || memory == null) {
+                || diskDeviceCount < 1 || networkDeviceCount < 1 || memory == null || cache == null) {
             throw new IllegalArgumentException("Simulation configuration contains an invalid capacity or duration");
         }
         quantumsMillis = List.copyOf(quantumsMillis);
@@ -31,11 +33,11 @@ public record SimulationConfig(
                             long agingScanPeriodMillis, int diskDeviceCount, int networkDeviceCount,
                             boolean ioPriorityBoost) {
         this(coreCount, quantumsMillis, agingThresholdMillis, agingScanPeriodMillis, diskDeviceCount,
-                networkDeviceCount, ioPriorityBoost, MemoryConfig.defaults());
+                networkDeviceCount, ioPriorityBoost, MemoryConfig.defaults(), CacheConfig.defaults());
     }
 
     public static SimulationConfig defaults() {
         return new SimulationConfig(4, List.of(10L, 20L, 40L), 500L, 100L, 1, 2, true,
-                MemoryConfig.defaults());
+                MemoryConfig.defaults(), CacheConfig.defaults());
     }
 }

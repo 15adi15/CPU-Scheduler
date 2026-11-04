@@ -8,6 +8,8 @@ public record SchedulerMetrics(
         long contextSwitches,
         long ioRequests,
         long pageFaults,
+        long l1CacheHits,
+        long l1CacheMisses,
         long cpuBusyMillis,
         double averageResponseMillis,
         double averageTurnaroundMillis,

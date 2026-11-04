@@ -35,7 +35,19 @@ public final class EngineVerification {
                     .allMatch(process -> process.state() == ProcessState.TERMINATED),
                     "no process may remain queued, running, or blocked");
         }
+        verifyL1Locality();
         System.out.println("Engine verification passed");
+    }
+
+    private static void verifyL1Locality() throws Exception {
+        SimulationConfig config = new SimulationConfig(1, List.of(2L, 4L), 25, 5, 1, 1, true);
+        try (SimulationEngine engine = new SimulationEngine(config, new SystemSimulationClock(), EventSink.noop())) {
+            engine.start();
+            engine.submit(new ProcessSpec(21, 1, 0, List.of(Burst.cpu(10))));
+            require(engine.awaitCompletion(Duration.ofSeconds(2)), "single-core cache workload should drain");
+            require(engine.metrics().l1CacheMisses() >= 1, "first resident page access must miss L1");
+            require(engine.metrics().l1CacheHits() >= 1, "repeated access on one core must hit L1");
+        }
     }
 
     private static void require(boolean condition, String message) {

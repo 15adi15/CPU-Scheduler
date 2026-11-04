@@ -1,6 +1,8 @@
 package io.github.adityasanjay.cpuscheduler.runtime;
 
 import io.github.adityasanjay.cpuscheduler.cpu.CpuCore;
+import io.github.adityasanjay.cpuscheduler.cache.CacheAccess;
+import io.github.adityasanjay.cpuscheduler.cache.CacheHierarchy;
 import io.github.adityasanjay.cpuscheduler.domain.Burst;
 import io.github.adityasanjay.cpuscheduler.domain.BurstType;
 import io.github.adityasanjay.cpuscheduler.domain.ProcessControlBlock;
@@ -43,6 +45,7 @@ public final class SimulationEngine implements AutoCloseable {
     private final DeviceController disk;
     private final DeviceController network;
     private final PagedMemoryManager memory;
+    private final CacheHierarchy cache;
 
     public SimulationEngine(SimulationConfig config, SimulationClock clock, EventSink events) {
         this.config = Objects.requireNonNull(config, "config");
@@ -54,6 +57,7 @@ public final class SimulationEngine implements AutoCloseable {
         this.disk = device("disk", config.diskDeviceCount());
         this.network = device("network", config.networkDeviceCount());
         this.memory = new PagedMemoryManager(config.memory(), clock, this::completePageFault);
+        this.cache = new CacheHierarchy(config.coreCount(), config.cache());
     }
 
     public void start() {
@@ -111,6 +115,18 @@ public final class SimulationEngine implements AutoCloseable {
             memory.requestPage(process, missingPage);
             return;
         }
+        CacheAccess cacheAccess = cache.access(coreId, process.spec().pid(), page);
+        if (cacheAccess.hit()) {
+            metrics.l1CacheHit();
+            emit("L1_HIT", process.spec().pid(), "core=" + coreId + ", page=" + page);
+        } else {
+            metrics.l1CacheMiss();
+            emit("L1_MISS", process.spec().pid(), "core=" + coreId + ", page=" + page);
+        }
+        if (cacheAccess.latencyMillis() > 0) {
+            clock.sleepMillis(cacheAccess.latencyMillis());
+        }
+        process.completeMemoryAccess();
 
         long sliceMillis = process.plannedCpuSlice(quantum);
         clock.sleepMillis(sliceMillis);
@@ -142,6 +158,10 @@ public final class SimulationEngine implements AutoCloseable {
 
     public Collection<ProcessSnapshot> processSnapshots() {
         return processes.values().stream().map(ProcessControlBlock::snapshot).toList();
+    }
+
+    public List<CacheHierarchy.CacheSnapshot> cacheSnapshots() {
+        return cache.snapshots();
     }
 
     public boolean awaitCompletion(Duration timeout) throws InterruptedException {
